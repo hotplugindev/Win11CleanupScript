@@ -1,127 +1,141 @@
-Ultra Gaming Minimal – Windows 11 Optimization Script
-Overview
+Here’s a professional **README** you can ship alongside your `UltraGamingMinimal.ps1` script. It explains what it does, how to run it, and how to make it automatically run after every Windows update.
 
-This script applies ultra-minimal optimizations for Windows 11 aimed at maximizing gaming performance and reducing micro-stutters. It safely disables unnecessary background apps, services, telemetry, animations, indexing, and optional features while keeping your system stable.
+---
 
-It also includes instructions to automatically reapply these optimizations after every Windows update or at user logon.
+# **Ultra Gaming Minimal – Windows 11 Optimization Script**
 
-Features
+## **Overview**
 
-Trims scheduled tasks that cause background CPU/GPU spikes (telemetry, maintenance, indexing).
+This script applies **ultra-minimal optimizations for Windows 11** aimed at maximizing gaming performance and reducing micro-stutters. It safely disables unnecessary background apps, services, telemetry, animations, indexing, and optional features while keeping your system stable.
 
-Disables Xbox/Game DVR, OneDrive syncing, and Microsoft UWP background apps.
+It also includes instructions to **automatically reapply these optimizations after every Windows update** or at user logon.
 
-Reduces Windows UI animations for faster window and taskbar performance.
+---
 
-Disables Windows Search Indexer and Hibernation/Fast Startup (optional).
+## **Features**
 
-Disables safe services that are unnecessary for gaming.
+* Trims scheduled tasks that cause background CPU/GPU spikes (telemetry, maintenance, indexing).
+* Disables Xbox/Game DVR, OneDrive syncing, and Microsoft UWP background apps.
+* Reduces Windows UI animations for faster window and taskbar performance.
+* Disables Windows Search Indexer and Hibernation/Fast Startup (optional).
+* Disables safe services that are unnecessary for gaming.
+* Disables optional Windows features (Hyper-V, WSL, Windows Sandbox, Media Playback, XPS Viewer).
+* Provides a fully automated scheduled task to reapply optimizations after updates.
 
-Disables optional Windows features (Hyper-V, WSL, Windows Sandbox, Media Playback, XPS Viewer).
+---
 
-Provides a fully automated scheduled task to reapply optimizations after updates.
+## **Prerequisites**
 
-Prerequisites
+* Windows 11 (should work on Windows 10, but some features may differ).
+* Administrative privileges to apply system tweaks.
+* PowerShell **Execution Policy** must allow running scripts (`Bypass` recommended).
 
-Windows 11 (should work on Windows 10, but some features may differ).
+---
 
-Administrative privileges to apply system tweaks.
+## **Step 1: Save the Script**
 
-PowerShell Execution Policy must allow running scripts (Bypass recommended).
+1. Create a folder for scripts (example: `C:\Scripts`).
+2. Save the file as:
 
-Step 1: Save the Script
-
-Create a folder for scripts (example: C:\Scripts).
-
-Save the file as:
-
+```
 C:\Scripts\UltraGamingMinimal.ps1
-Step 2: Run the Script Manually (First Time)
+```
 
-Open PowerShell as Administrator.
+---
 
-Run:
+## **Step 2: Run the Script Manually (First Time)**
 
+1. Open **PowerShell as Administrator**.
+2. Run:
+
+```powershell
 Set-ExecutionPolicy Bypass -Scope Process
 C:\Scripts\UltraGamingMinimal.ps1
+```
 
-Wait for the script to complete.
+3. Wait for the script to complete.
+4. **Restart your PC** for full effect.
 
-Restart your PC for full effect.
+---
 
-Step 3: Make It Run Automatically After Every Update
+## **Step 3: Make It Run Automatically After Every Update**
 
 This ensures Windows cannot revert your optimizations after updates.
 
-3.1 Open Task Scheduler
+### **3.1 Open Task Scheduler**
 
-Press Win + S → type Task Scheduler → open it.
+1. Press `Win + S` → type `Task Scheduler` → open it.
+2. Click **Create Task** (not Basic Task).
 
-Click Create Task (not Basic Task).
+---
 
-3.2 General Tab
+### **3.2 General Tab**
 
-Name: UltraGamingMinimalPostUpdate
+* Name: `UltraGamingMinimalPostUpdate`
+* Check: `Run with highest privileges`
+* Option: `Run whether user is logged in or not`
 
-Check: Run with highest privileges
+---
 
-Option: Run whether user is logged in or not
+### **3.3 Triggers Tab**
 
-3.3 Triggers Tab
+* **Trigger 1: After Windows Update**
 
-Trigger 1: After Windows Update
+  * Begin the task: **On an event**
+  * Log: `Microsoft-Windows-WindowsUpdateClient/Operational`
+  * Event ID: `19` (successful update)
 
-Begin the task: On an event
+* **Trigger 2: At Logon (Optional)**
 
-Log: Microsoft-Windows-WindowsUpdateClient/Operational
+  * Begin the task: `At logon`
+  * Ensures tweaks persist if Windows resets some settings after update.
 
-Event ID: 19 (successful update)
+---
 
-Trigger 2: At Logon (Optional)
+### **3.4 Actions Tab**
 
-Begin the task: At logon
+* Action: **Start a program**
+* Program/script: `powershell.exe`
+* Add arguments:
 
-Ensures tweaks persist if Windows resets some settings after update.
-
-3.4 Actions Tab
-
-Action: Start a program
-
-Program/script: powershell.exe
-
-Add arguments:
-
+```text
 -ExecutionPolicy Bypass -File "C:\Scripts\UltraGamingMinimal.ps1"
-3.5 Conditions & Settings
+```
 
-Conditions: uncheck “Start the task only if the computer is on AC power” (optional for desktops).
+---
 
-Settings:
+### **3.5 Conditions & Settings**
 
-Check “Run task as soon as possible after a scheduled start is missed”
+* Conditions: uncheck “Start the task only if the computer is on AC power” (optional for desktops).
+* Settings:
 
-Check “If the task fails, restart every 1 minute, attempt 3 times”
+  * Check “Run task as soon as possible after a scheduled start is missed”
+  * Check “If the task fails, restart every 1 minute, attempt 3 times”
 
-Step 4: Verification
+---
 
-After running the script manually or automatically:
+## **Step 4: Verification**
 
-Open Task Manager → Services to see disabled services.
+1. After running the script manually or automatically:
 
-Open Settings → Privacy → Background apps to confirm background access is off.
+   * Open **Task Manager → Services** to see disabled services.
+   * Open **Settings → Privacy → Background apps** to confirm background access is off.
+   * Check scheduled tasks you disabled are no longer running automatically.
 
-Check scheduled tasks you disabled are no longer running automatically.
+2. Restart your PC to confirm all changes persist.
 
-Restart your PC to confirm all changes persist.
+---
 
-Step 5: Reverting Changes (Optional)
+## **Step 5: Reverting Changes (Optional)**
 
-Restore a system restore point if made prior to running the script.
+* Restore a **system restore point** if made prior to running the script.
+* Services can be set back to Automatic in **Task Manager → Services**.
+* Optional features can be re-enabled via PowerShell:
 
-Services can be set back to Automatic in Task Manager → Services.
-
-Optional features can be re-enabled via PowerShell:
-
+```powershell
 Enable-WindowsOptionalFeature -Online -FeatureName <FeatureName>
+```
 
-Background apps can be re-enabled via Settings → Apps → Apps & Features → Background apps.
+* Background apps can be re-enabled via Settings → Apps → Apps & Features → Background apps.
+
+---
