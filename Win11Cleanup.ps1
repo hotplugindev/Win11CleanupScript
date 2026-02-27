@@ -1,18 +1,31 @@
-# ========================================================
-# Interactive Windows 11 Ultra-Minimal Gaming Script
-# Prompts before each tweak and explains what it does
-# ========================================================
+# =========================================================
+# Windows 11 Ultra-Minimal Interactive Gaming Script (Persistent)
+# Prompts before each tweak and can persist choices automatically
+# =========================================================
 
-function Confirm-Action($Description) {
+# Directory for persistent copy
+$PersistentPath = "C:\ProgramData\UltraGamingMinimal"
+$PersistentScript = Join-Path $PersistentPath "Persistent.ps1"
+
+# Create folder if it doesn't exist
+if (-not (Test-Path $PersistentPath)) {
+    New-Item -ItemType Directory -Path $PersistentPath | Out-Null
+}
+
+# Store choices in a hashtable
+$UserChoices = @{}
+
+function Confirm-Action($Key, $Description) {
     Write-Host "`n$Description" -ForegroundColor Cyan
     $confirmation = Read-Host "Do you want to apply this tweak? (Y/N)"
-    return $confirmation -match '^(Y|y)$'
+    $UserChoices[$Key] = $confirmation -match '^(Y|y)$'
+    return $UserChoices[$Key]
 }
 
 # -----------------------------
 # 1. Trim scheduled tasks
 # -----------------------------
-if (Confirm-Action "Trim scheduled tasks that cause background CPU/GPU spikes (telemetry, maintenance, indexing, feedback, Windows tips)?") {
+if (Confirm-Action "TrimTasks" "Trim scheduled tasks that cause background CPU/GPU spikes (telemetry, maintenance, indexing, feedback, Windows tips)?") {
     $tasksToDisable = @(
         "\Microsoft\Windows\Application Experience\ProgramDataUpdater",
         "\Microsoft\Windows\Customer Experience Improvement Program\Consolidator",
@@ -37,28 +50,15 @@ if (Confirm-Action "Trim scheduled tasks that cause background CPU/GPU spikes (t
 }
 
 # -----------------------------
-# 2. Disable or set gaming-safe services
+# 2. Gaming-safe services
 # -----------------------------
-if (Confirm-Action "Disable or set to manual unnecessary services like Xbox, telemetry, OneDrive, printing, and indexing?") {
+if (Confirm-Action "Services" "Disable or set to manual unnecessary services like Xbox, telemetry, OneDrive, printing, and indexing?") {
     $services = @(
-        "XboxGipSvc",
-        "XblAuthManager",
-        "XblGameSave",
-        "GamingServices",
-        "PrintSpooler",
-        "RemoteRegistry",
-        "WSearch",
-        "DiagTrack",
-        "dmwappushservice",
-        "MapsBroker",
-        "RetailDemo",
-        "PhoneSvc",
-        "WbioSrvc",
-        "WMPNetworkSvc",
-        "CDPSvc",
-        "WaaSMedicSvc"
+        "XboxGipSvc","XblAuthManager","XblGameSave","GamingServices",
+        "PrintSpooler","RemoteRegistry","WSearch","DiagTrack","dmwappushservice",
+        "MapsBroker","RetailDemo","PhoneSvc","WbioSrvc","WMPNetworkSvc",
+        "CDPSvc","WaaSMedicSvc"
     )
-
     foreach ($svc in $services) {
         try {
             Set-Service -Name $svc -StartupType Manual
@@ -72,9 +72,9 @@ if (Confirm-Action "Disable or set to manual unnecessary services like Xbox, tel
 }
 
 # -----------------------------
-# 3. Disable OneDrive
+# 3. OneDrive
 # -----------------------------
-if (Confirm-Action "Stop OneDrive syncing completely (safe if you don't use it)?") {
+if (Confirm-Action "OneDrive" "Stop OneDrive syncing completely (safe if not used)?") {
     try {
         Stop-Process -Name OneDrive -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path "HKCU:\Software\Microsoft\OneDrive" -Name "UserSettingSyncEnabled" -Value 0 -ErrorAction SilentlyContinue
@@ -84,13 +84,13 @@ if (Confirm-Action "Stop OneDrive syncing completely (safe if you don't use it)?
 }
 
 # -----------------------------
-# 4. Disable Xbox DVR / Game Bar Recording
+# 4. Xbox Game DVR / Game Bar
 # -----------------------------
-if (Confirm-Action "Disable Xbox Game DVR / Game Bar recording to improve performance?") {
+if (Confirm-Action "GameDVR" "Disable Xbox Game DVR / Game Bar recording?") {
     try {
         Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AppCaptureEnabled" -Value 0 -ErrorAction SilentlyContinue
         Set-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_Enabled" -Value 0 -ErrorAction SilentlyContinue
-        Write-Host "Game DVR / Game Bar disabled"
+        Write-Host "Game DVR disabled"
     }
     catch {}
 }
@@ -98,7 +98,7 @@ if (Confirm-Action "Disable Xbox Game DVR / Game Bar recording to improve perfor
 # -----------------------------
 # 5. Reduce animations
 # -----------------------------
-if (Confirm-Action "Reduce taskbar, start menu, and window animations for faster UI?") {
+if (Confirm-Action "Animations" "Reduce taskbar, start menu, and window animations for faster UI?") {
     try {
         Set-ItemProperty -Path "HKCU:\Control Panel\Desktop\WindowMetrics" -Name "MinAnimate" -Value 0 -ErrorAction SilentlyContinue
         Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "DragFullWindows" -Value 0 -ErrorAction SilentlyContinue
@@ -110,7 +110,7 @@ if (Confirm-Action "Reduce taskbar, start menu, and window animations for faster
 # -----------------------------
 # 6. Disable background apps
 # -----------------------------
-if (Confirm-Action "Disable all Microsoft default apps from running in the background (safe, but apps still launch normally)?") {
+if (Confirm-Action "BackgroundApps" "Disable all Microsoft default apps from running in background?") {
     $apps = Get-AppxPackage | Where-Object { $_.Name -like "Microsoft.*" }
     foreach ($app in $apps) {
         try {
@@ -124,9 +124,9 @@ if (Confirm-Action "Disable all Microsoft default apps from running in the backg
 }
 
 # -----------------------------
-# 7. Disable Windows Search Indexer
+# 7. Search Indexer
 # -----------------------------
-if (Confirm-Action "Disable Windows Search Indexer (optional, improves gaming but slows file searches)?") {
+if (Confirm-Action "SearchIndexer" "Disable Windows Search Indexer? (optional, speeds gaming but slows searches)") {
     try {
         Stop-Service WSearch -Force
         Set-Service WSearch -StartupType Disabled
@@ -136,9 +136,9 @@ if (Confirm-Action "Disable Windows Search Indexer (optional, improves gaming bu
 }
 
 # -----------------------------
-# 8. Disable Hibernation / Fast Startup
+# 8. Hibernation / Fast Startup
 # -----------------------------
-if (Confirm-Action "Disable Hibernation / Fast Startup (frees disk space, reduces stutter during boot)?") {
+if (Confirm-Action "FastStartup" "Disable Hibernation / Fast Startup?") {
     try {
         powercfg -h off
         Write-Host "Hibernation / Fast Startup disabled"
@@ -147,19 +147,13 @@ if (Confirm-Action "Disable Hibernation / Fast Startup (frees disk space, reduce
 }
 
 # -----------------------------
-# 9. Disable optional Windows features
+# 9. Optional features
 # -----------------------------
-if (Confirm-Action "Disable optional features not needed for gaming (Hyper-V, WSL, Sandbox, Media Playback)?") {
+if (Confirm-Action "OptionalFeatures" "Disable optional features not needed for gaming? (Hyper-V, WSL, Sandbox, Media Playback)") {
     $optionalFeatures = @(
-        "Microsoft-Hyper-V-All",
-        "Windows-Subsystem-Linux",
-        "Containers-DisposableClientVM",
-        "Windows-Defender-ApplicationGuard",
-        "Windows-Sandbox",
-        "MediaPlayback",
-        "XPSViewer"
+        "Microsoft-Hyper-V-All","Windows-Subsystem-Linux","Containers-DisposableClientVM",
+        "Windows-Defender-ApplicationGuard","Windows-Sandbox","MediaPlayback","XPSViewer"
     )
-
     foreach ($feature in $optionalFeatures) {
         try {
             Disable-WindowsOptionalFeature -Online -FeatureName $feature -NoRestart -ErrorAction SilentlyContinue
@@ -170,15 +164,45 @@ if (Confirm-Action "Disable optional features not needed for gaming (Hyper-V, WS
 }
 
 # -----------------------------
-# 10. Optional extreme tweak: Font Cache
+# 10. Font Cache
 # -----------------------------
-if (Confirm-Action "Disable Font Cache service (optional, high-end systems)?") {
+if (Confirm-Action "FontCache" "Disable Font Cache service (optional, high-end systems)?") {
     try {
         Stop-Service "FontCache" -Force -ErrorAction SilentlyContinue
         Set-Service "FontCache" -StartupType Disabled
         Write-Host "Font Cache service disabled"
     }
     catch {}
+}
+
+# -----------------------------
+# 11. Ask about persisting changes
+# -----------------------------
+$persist = Read-Host "`nDo you want to save these choices and persist them after every Windows update? (Y/N)"
+if ($persist -match '^(Y|y)$') {
+    # Save persistent copy
+    $ScriptContent = @"
+# =========================================================
+# Persistent Ultra Gaming Minimal Script
+# Auto-generated based on your choices
+# =========================================================
+`$UserChoices = $($UserChoices | ConvertTo-Json -Compress)
+. '$PSCommandPath'  # Source original script to apply choices
+"@
+    Set-Content -Path $PersistentScript -Value $ScriptContent -Force
+
+    # Create scheduled task
+    $Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -File `"$PersistentScript`""
+    $Trigger1 = New-ScheduledTaskTrigger -AtLogOn
+    $Trigger2 = New-ScheduledTaskTrigger -Logon "SYSTEM"
+    $UpdateTrigger = New-ScheduledTaskTrigger -AtStartup
+    try {
+        Register-ScheduledTask -TaskName "UltraGamingMinimalPersistent" -Action $Action -Trigger $Trigger1,$UpdateTrigger -RunLevel Highest -Force
+        Write-Host "`nPersistent scheduled task created: UltraGamingMinimalPersistent"
+    }
+    catch {
+        Write-Host "Failed to create scheduled task: $($_.Exception.Message)"
+    }
 }
 
 Write-Host "`nAll selected tweaks applied. Restart recommended for full effect." -ForegroundColor Green
