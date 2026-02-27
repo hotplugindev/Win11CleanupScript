@@ -178,7 +178,7 @@ if (Confirm-Action "FontCache" "Disable Font Cache service (optional, high-end s
 # -----------------------------
 # 11. Ask about persisting changes
 # -----------------------------
-$persist = Read-Host "`nDo you want to save these choices and persist them after every Windows update? (Y/N)"
+$persist = Read-Host "`nDo you want to save these choices and persist them after every Windows update or startup? (Y/N)"
 if ($persist -match '^(Y|y)$') {
     # Save persistent copy
     $ScriptContent = @"
@@ -193,11 +193,16 @@ if ($persist -match '^(Y|y)$') {
 
     # Create scheduled task
     $Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -File `"$PersistentScript`""
-    $Trigger1 = New-ScheduledTaskTrigger -AtLogOn
-    $Trigger2 = New-ScheduledTaskTrigger -Logon "SYSTEM"
-    $UpdateTrigger = New-ScheduledTaskTrigger -AtStartup
+
+    # Hybrid triggers: At startup + At logon
+    $TriggerStartup = New-ScheduledTaskTrigger -AtStartup
+    $TriggerLogon = New-ScheduledTaskTrigger -AtLogon
+
     try {
-        Register-ScheduledTask -TaskName "UltraGamingMinimalPersistent" -Action $Action -Trigger $Trigger1,$UpdateTrigger -RunLevel Highest -Force
+        Register-ScheduledTask -TaskName "UltraGamingMinimalPersistent" `
+            -Action $Action `
+            -Trigger $TriggerStartup,$TriggerLogon `
+            -RunLevel Highest -Force
         Write-Host "`nPersistent scheduled task created: UltraGamingMinimalPersistent"
     }
     catch {
