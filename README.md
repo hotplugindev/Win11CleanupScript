@@ -1,137 +1,121 @@
-# **Ultra Gaming Minimal – Windows 11 Optimization Script**
+# **Ultra Gaming Minimal Interactive – Persistent Windows 11 Optimization Script**
 
 ## **Overview**
 
-This script applies **ultra-minimal optimizations for Windows 11** aimed at maximizing gaming performance and reducing micro-stutters. It safely disables unnecessary background apps, services, telemetry, animations, indexing, and optional features while keeping your system stable.
+This script is an **interactive Windows 11 optimization tool** designed to maximize gaming performance by safely disabling:
 
-It also includes instructions to **automatically reapply these optimizations after every Windows update** or at user logon.
+* Background apps, UWP apps, and telemetry
+* Scheduled tasks that cause CPU/GPU spikes
+* Unnecessary services (Xbox, printing, indexing, OneDrive, telemetry)
+* Windows animations and visual effects
+* Optional Windows features (Hyper-V, WSL, Sandbox, Media Playback)
+
+It also allows you to **persist your chosen optimizations** automatically after **Windows updates** or at **logon**, so your system remains optimized without manually rerunning the script.
 
 ---
 
 ## **Features**
 
-* Trims scheduled tasks that cause background CPU/GPU spikes (telemetry, maintenance, indexing).
-* Disables Xbox/Game DVR, OneDrive syncing, and Microsoft UWP background apps.
-* Reduces Windows UI animations for faster window and taskbar performance.
-* Disables Windows Search Indexer and Hibernation/Fast Startup (optional).
-* Disables safe services that are unnecessary for gaming.
-* Disables optional Windows features (Hyper-V, WSL, Windows Sandbox, Media Playback, XPS Viewer).
-* Provides a fully automated scheduled task to reapply optimizations after updates.
+* Prompts before every tweak with **clear explanations**
+* Records your **choices** for later reuse
+* Optionally saves a **persistent script** in a safe location (`C:\ProgramData\UltraGamingMinimal\Persistent.ps1`)
+* Automatically creates a **scheduled task** to run the persistent script at **logon** and **after Windows updates**
+* Includes extreme tweaks for high-end systems like **Ryzen 5800X + 32GB RAM**
 
 ---
 
 ## **Prerequisites**
 
-* Windows 11 (should work on Windows 10, but some features may differ).
-* Administrative privileges to apply system tweaks.
-* PowerShell **Execution Policy** must allow running scripts (`Bypass` recommended).
+* Windows 11 (Windows 10 partially supported)
+* Administrator privileges
+* PowerShell execution policy allowing script execution (Bypass recommended)
 
 ---
 
 ## **Step 1: Save the Script**
 
-1. Create a folder for scripts (example: `C:\Scripts`).
+1. Create a folder for scripts (e.g., `C:\Scripts`).
 2. Save the file as:
 
 ```
-C:\Scripts\UltraGamingMinimal.ps1
+C:\Scripts\UltraGamingMinimalPersistent.ps1
 ```
 
 ---
 
-## **Step 2: Run the Script Manually (First Time)**
+## **Step 2: Run the Script**
 
-1. Open **PowerShell as Administrator**.
-2. Run:
+1. Open **PowerShell as Administrator**
+2. Execute:
 
 ```powershell
 Set-ExecutionPolicy Bypass -Scope Process
-C:\Scripts\UltraGamingMinimal.ps1
+C:\Scripts\UltraGamingMinimalPersistent.ps1
 ```
 
-3. Wait for the script to complete.
-4. **Restart your PC** for full effect.
+3. The script will **prompt for each tweak**:
+
+* You type `Y` to apply or `N` to skip
+* Explanations are provided for each tweak so you understand the impact
 
 ---
 
-## **Step 3: Make It Run Automatically After Every Update**
+## **Step 3: Persist Your Choices**
 
-This ensures Windows cannot revert your optimizations after updates.
+At the end, the script will ask:
 
-### **3.1 Open Task Scheduler**
+> “Do you want to save these choices and persist them after every Windows update?”
 
-1. Press `Win + S` → type `Task Scheduler` → open it.
-2. Click **Create Task** (not Basic Task).
+* **Yes:**
 
----
+  * Saves a copy of the script with your selected choices in:
 
-### **3.2 General Tab**
+  ```
+  C:\ProgramData\UltraGamingMinimal\Persistent.ps1
+  ```
 
-* Name: `UltraGamingMinimalPostUpdate`
-* Check: `Run with highest privileges`
-* Option: `Run whether user is logged in or not`
+  * Creates a **scheduled task** named `UltraGamingMinimalPersistent` that runs:
 
----
+    * At **logon**
+    * After **Windows updates / startup**
 
-### **3.3 Triggers Tab**
+* **No:**
 
-* **Trigger 1: After Windows Update**
-
-  * Begin the task: **On an event**
-  * Log: `Microsoft-Windows-WindowsUpdateClient/Operational`
-  * Event ID: `19` (successful update)
-
-* **Trigger 2: At Logon (Optional)**
-
-  * Begin the task: `At logon`
-  * Ensures tweaks persist if Windows resets some settings after update.
-
----
-
-### **3.4 Actions Tab**
-
-* Action: **Start a program**
-* Program/script: `powershell.exe`
-* Add arguments:
-
-```text
--ExecutionPolicy Bypass -File "C:\Scripts\UltraGamingMinimal.ps1"
-```
-
----
-
-### **3.5 Conditions & Settings**
-
-* Conditions: uncheck “Start the task only if the computer is on AC power” (optional for desktops).
-* Settings:
-
-  * Check “Run task as soon as possible after a scheduled start is missed”
-  * Check “If the task fails, restart every 1 minute, attempt 3 times”
+  * The script will only apply tweaks **this session**
 
 ---
 
 ## **Step 4: Verification**
 
-1. After running the script manually or automatically:
+1. Check that services are stopped / set to manual:
 
-   * Open **Task Manager → Services** to see disabled services.
-   * Open **Settings → Privacy → Background apps** to confirm background access is off.
-   * Check scheduled tasks you disabled are no longer running automatically.
+   * Open **Task Manager → Services**
+2. Verify background apps are disabled:
 
-2. Restart your PC to confirm all changes persist.
+   * **Settings → Apps → Apps & Features → Background apps**
+3. Ensure scheduled tasks for telemetry, indexing, and maintenance are disabled:
+
+   * **Task Scheduler → Microsoft → Windows →** relevant folders
 
 ---
 
 ## **Step 5: Reverting Changes (Optional)**
 
-* Restore a **system restore point** if made prior to running the script.
-* Services can be set back to Automatic in **Task Manager → Services**.
-* Optional features can be re-enabled via PowerShell:
+* Restore a **system restore point** created before running the script
+* Manually re-enable services via **Task Manager → Services**
+* Re-enable optional features using PowerShell:
 
 ```powershell
 Enable-WindowsOptionalFeature -Online -FeatureName <FeatureName>
 ```
 
-* Background apps can be re-enabled via Settings → Apps → Apps & Features → Background apps.
+* Re-enable background apps via **Settings → Apps → Background apps**
 
 ---
+
+## **Notes**
+
+* Script is **gaming-focused**, safe for high-end PCs.
+* Some apps like Microsoft Store or Xbox Game Pass may recreate background tasks; the **persistent scheduled task** ensures they are automatically re-disabled.
+* Always run PowerShell **as Administrator** to allow full effect.
+* Restart recommended after running for all changes to take effect.
