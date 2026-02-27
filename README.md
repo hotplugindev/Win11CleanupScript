@@ -1,7 +1,3 @@
-Here’s a professional **README** you can ship alongside your `UltraGamingMinimal.ps1` script. It explains what it does, how to run it, and how to make it automatically run after every Windows update.
-
----
-
 # **Ultra Gaming Minimal – Windows 11 Optimization Script**
 
 ## **Overview**
