@@ -1,164 +1,184 @@
 # ========================================================
-# Windows 11 Ultra-Minimal Gaming Optimization Script
-# Applies safe but aggressive tweaks for maximum smoothness
+# Interactive Windows 11 Ultra-Minimal Gaming Script
+# Prompts before each tweak and explains what it does
 # ========================================================
 
-# -----------------------------
-# 1. Trim scheduled tasks (telemetry, CEIP, maintenance, tips)
-# -----------------------------
-$tasksToDisable = @(
-    "\Microsoft\Windows\Application Experience\ProgramDataUpdater",
-    "\Microsoft\Windows\Customer Experience Improvement Program\Consolidator",
-    "\Microsoft\Windows\Customer Experience Improvement Program\KernelCeipTask",
-    "\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip",
-    "\Microsoft\Windows\Defrag\ScheduledDefrag",
-    "\Microsoft\Windows\Windows Error Reporting\QueueReporting",
-    "\Microsoft\Windows\UpdateOrchestrator\Schedule Scan",
-    "\Microsoft\Windows\Feedback Hub\*",
-    "\Microsoft\Windows\Maintenance\*",
-    "\Microsoft\Windows\Windows Defender\*"
-)
+function Confirm-Action($Description) {
+    Write-Host "`n$Description" -ForegroundColor Cyan
+    $confirmation = Read-Host "Do you want to apply this tweak? (Y/N)"
+    return $confirmation -match '^(Y|y)$'
+}
 
-foreach ($taskPath in $tasksToDisable) {
-    try {
-        Disable-ScheduledTask -TaskPath (Split-Path $taskPath) -TaskName (Split-Path $taskPath -Leaf)
-        Write-Host "Disabled scheduled task: ${taskPath}"
-    }
-    catch {
-        Write-Host "Failed to disable ${taskPath}: $($_.Exception.Message)"
+# -----------------------------
+# 1. Trim scheduled tasks
+# -----------------------------
+if (Confirm-Action "Trim scheduled tasks that cause background CPU/GPU spikes (telemetry, maintenance, indexing, feedback, Windows tips)?") {
+    $tasksToDisable = @(
+        "\Microsoft\Windows\Application Experience\ProgramDataUpdater",
+        "\Microsoft\Windows\Customer Experience Improvement Program\Consolidator",
+        "\Microsoft\Windows\Customer Experience Improvement Program\KernelCeipTask",
+        "\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip",
+        "\Microsoft\Windows\Defrag\ScheduledDefrag",
+        "\Microsoft\Windows\Windows Error Reporting\QueueReporting",
+        "\Microsoft\Windows\UpdateOrchestrator\Schedule Scan",
+        "\Microsoft\Windows\Feedback Hub\*",
+        "\Microsoft\Windows\Maintenance\*",
+        "\Microsoft\Windows\Windows Defender\*"
+    )
+    foreach ($taskPath in $tasksToDisable) {
+        try {
+            Disable-ScheduledTask -TaskPath (Split-Path $taskPath) -TaskName (Split-Path $taskPath -Leaf)
+            Write-Host "Disabled scheduled task: ${taskPath}"
+        }
+        catch {
+            Write-Host "Failed to disable ${taskPath}: $($_.Exception.Message)"
+        }
     }
 }
 
 # -----------------------------
 # 2. Disable or set gaming-safe services
 # -----------------------------
-$services = @(
-    "XboxGipSvc",
-    "XblAuthManager",
-    "XblGameSave",
-    "GamingServices",
-    "PrintSpooler",
-    "RemoteRegistry",
-    "WSearch",
-    "DiagTrack",           # Connected User Experiences & Telemetry
-    "dmwappushservice",    # Device Management Wireless Push
-    "MapsBroker",          # Maps update service
-    "RetailDemo",          # Retail demo
-    "PhoneSvc",            # Phone experience
-    "WbioSrvc",            # Biometric services
-    "WMPNetworkSvc",       # Windows Media Player Network Sharing
-    "CDPSvc",              # Connected Devices Platform Service
-    "WaaSMedicSvc"         # Windows Update repair service (can leave manual)
-)
+if (Confirm-Action "Disable or set to manual unnecessary services like Xbox, telemetry, OneDrive, printing, and indexing?") {
+    $services = @(
+        "XboxGipSvc",
+        "XblAuthManager",
+        "XblGameSave",
+        "GamingServices",
+        "PrintSpooler",
+        "RemoteRegistry",
+        "WSearch",
+        "DiagTrack",
+        "dmwappushservice",
+        "MapsBroker",
+        "RetailDemo",
+        "PhoneSvc",
+        "WbioSrvc",
+        "WMPNetworkSvc",
+        "CDPSvc",
+        "WaaSMedicSvc"
+    )
 
-foreach ($svc in $services) {
+    foreach ($svc in $services) {
+        try {
+            Set-Service -Name $svc -StartupType Manual
+            Stop-Service -Name $svc -Force
+            Write-Host "Set ${svc} to Manual and stopped"
+        }
+        catch {
+            Write-Host "Failed ${svc}: $($_.Exception.Message)"
+        }
+    }
+}
+
+# -----------------------------
+# 3. Disable OneDrive
+# -----------------------------
+if (Confirm-Action "Stop OneDrive syncing completely (safe if you don't use it)?") {
     try {
-        Set-Service -Name $svc -StartupType Manual
-        Stop-Service -Name $svc -Force
-        Write-Host "Set ${svc} to Manual and stopped"
+        Stop-Process -Name OneDrive -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path "HKCU:\Software\Microsoft\OneDrive" -Name "UserSettingSyncEnabled" -Value 0 -ErrorAction SilentlyContinue
+        Write-Host "OneDrive syncing disabled"
     }
-    catch {
-        Write-Host "Failed ${svc}: $($_.Exception.Message)"
-    }
+    catch {}
 }
-
-# -----------------------------
-# 3. Disable OneDrive completely
-# -----------------------------
-try {
-    Stop-Process -Name OneDrive -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path "HKCU:\Software\Microsoft\OneDrive" -Name "UserSettingSyncEnabled" -Value 0 -ErrorAction SilentlyContinue
-    Write-Host "OneDrive syncing disabled"
-}
-catch {}
 
 # -----------------------------
 # 4. Disable Xbox DVR / Game Bar Recording
 # -----------------------------
-try {
-    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AppCaptureEnabled" -Value 0 -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_Enabled" -Value 0 -ErrorAction SilentlyContinue
-    Write-Host "Game DVR / Game Bar disabled"
-}
-catch {}
-
-# -----------------------------
-# 5. Reduce taskbar/start menu and window animations
-# -----------------------------
-try {
-    Set-ItemProperty -Path "HKCU:\Control Panel\Desktop\WindowMetrics" -Name "MinAnimate" -Value 0 -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "DragFullWindows" -Value 0 -ErrorAction SilentlyContinue
-    Write-Host "Animations reduced"
-}
-catch {}
-
-# -----------------------------
-# 6. Disable Background Apps (all default Microsoft UWP apps)
-# -----------------------------
-$apps = Get-AppxPackage | Where-Object { $_.Name -like "Microsoft.*" }
-
-foreach ($app in $apps) {
+if (Confirm-Action "Disable Xbox Game DVR / Game Bar recording to improve performance?") {
     try {
-        $regPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications\$($app.PackageFullName)"
-        if (-not (Test-Path $regPath)) { New-Item -Path $regPath -Force | Out-Null }
-        Set-ItemProperty -Path $regPath -Name "Enabled" -Value 0 -Force
-        Write-Host "Disabled background access for ${($app.Name)}"
+        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\GameDVR" -Name "AppCaptureEnabled" -Value 0 -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_Enabled" -Value 0 -ErrorAction SilentlyContinue
+        Write-Host "Game DVR / Game Bar disabled"
     }
     catch {}
 }
 
 # -----------------------------
-# 7. Disable Windows Search Indexer permanently (optional)
+# 5. Reduce animations
 # -----------------------------
-try {
-    Stop-Service WSearch -Force
-    Set-Service WSearch -StartupType Disabled
-    Write-Host "Windows Search Indexer disabled"
+if (Confirm-Action "Reduce taskbar, start menu, and window animations for faster UI?") {
+    try {
+        Set-ItemProperty -Path "HKCU:\Control Panel\Desktop\WindowMetrics" -Name "MinAnimate" -Value 0 -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "DragFullWindows" -Value 0 -ErrorAction SilentlyContinue
+        Write-Host "Animations reduced"
+    }
+    catch {}
 }
-catch {}
+
+# -----------------------------
+# 6. Disable background apps
+# -----------------------------
+if (Confirm-Action "Disable all Microsoft default apps from running in the background (safe, but apps still launch normally)?") {
+    $apps = Get-AppxPackage | Where-Object { $_.Name -like "Microsoft.*" }
+    foreach ($app in $apps) {
+        try {
+            $regPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications\$($app.PackageFullName)"
+            if (-not (Test-Path $regPath)) { New-Item -Path $regPath -Force | Out-Null }
+            Set-ItemProperty -Path $regPath -Name "Enabled" -Value 0 -Force
+            Write-Host "Disabled background access for ${($app.Name)}"
+        }
+        catch {}
+    }
+}
+
+# -----------------------------
+# 7. Disable Windows Search Indexer
+# -----------------------------
+if (Confirm-Action "Disable Windows Search Indexer (optional, improves gaming but slows file searches)?") {
+    try {
+        Stop-Service WSearch -Force
+        Set-Service WSearch -StartupType Disabled
+        Write-Host "Windows Search Indexer disabled"
+    }
+    catch {}
+}
 
 # -----------------------------
 # 8. Disable Hibernation / Fast Startup
 # -----------------------------
-try {
-    powercfg -h off
-    Write-Host "Hibernation / Fast Startup disabled"
-}
-catch {}
-
-# -----------------------------
-# 9. Disable optional Windows features (if not used)
-# -----------------------------
-$optionalFeatures = @(
-    "Microsoft-Hyper-V-All",
-    "Windows-Subsystem-Linux",
-    "Containers-DisposableClientVM",
-    "Windows-Defender-ApplicationGuard",
-    "Windows-Sandbox",
-    "MediaPlayback",
-    "XPSViewer"
-)
-
-foreach ($feature in $optionalFeatures) {
+if (Confirm-Action "Disable Hibernation / Fast Startup (frees disk space, reduces stutter during boot)?") {
     try {
-        Disable-WindowsOptionalFeature -Online -FeatureName $feature -NoRestart -ErrorAction SilentlyContinue
-        Write-Host "Disabled optional feature: ${feature}"
+        powercfg -h off
+        Write-Host "Hibernation / Fast Startup disabled"
     }
     catch {}
 }
 
 # -----------------------------
-# 10. Optional extreme tweaks (high-end systems)
+# 9. Disable optional Windows features
 # -----------------------------
-# Disable font cache service if not needed
-try {
-    Stop-Service "FontCache" -Force -ErrorAction SilentlyContinue
-    Set-Service "FontCache" -StartupType Disabled
-    Write-Host "Font Cache service disabled"
+if (Confirm-Action "Disable optional features not needed for gaming (Hyper-V, WSL, Sandbox, Media Playback)?") {
+    $optionalFeatures = @(
+        "Microsoft-Hyper-V-All",
+        "Windows-Subsystem-Linux",
+        "Containers-DisposableClientVM",
+        "Windows-Defender-ApplicationGuard",
+        "Windows-Sandbox",
+        "MediaPlayback",
+        "XPSViewer"
+    )
+
+    foreach ($feature in $optionalFeatures) {
+        try {
+            Disable-WindowsOptionalFeature -Online -FeatureName $feature -NoRestart -ErrorAction SilentlyContinue
+            Write-Host "Disabled optional feature: ${feature}"
+        }
+        catch {}
+    }
 }
-catch {}
 
 # -----------------------------
-# 11. Finish
+# 10. Optional extreme tweak: Font Cache
 # -----------------------------
-Write-Host "All ultra-minimal gaming tweaks applied. Restart recommended for full effect."
+if (Confirm-Action "Disable Font Cache service (optional, high-end systems)?") {
+    try {
+        Stop-Service "FontCache" -Force -ErrorAction SilentlyContinue
+        Set-Service "FontCache" -StartupType Disabled
+        Write-Host "Font Cache service disabled"
+    }
+    catch {}
+}
+
+Write-Host "`nAll selected tweaks applied. Restart recommended for full effect." -ForegroundColor Green
